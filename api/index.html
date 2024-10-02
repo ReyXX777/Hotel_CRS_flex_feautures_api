@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Hotel Room Map</title>
+    <style>
+        .room {
+            width: 100px;
+            height: 100px;
+            margin: 10px;
+            display: inline-block;
+            text-align: center;
+            line-height: 100px;
+            font-size: 20px;
+            color: white;
+        }
+        .available {
+            background-color: green;
+        }
+        .reserved {
+            background-color: red;
+        }
+    </style>
+</head>
+<body>
+    <h1>Hotel Room Map</h1>
+    <div id="room-map"></div>
+
+    <script>
+        async function fetchRooms() {
+            const response = await fetch('/api/rooms');
+            const rooms = await response.json();
+            const roomMap = document.getElementById('room-map');
+            roomMap.innerHTML = '';
+
+            for (const [room, status] of Object.entries(rooms)) {
+                const roomDiv = document.createElement('div');
+                roomDiv.className = `room ${status ? 'reserved' : 'available'}`;
+                roomDiv.textContent = room;
+                roomMap.appendChild(roomDiv);
+            }
+        }
+
+        fetchRooms();
+        setInterval(fetchRooms, 5000); // Refresh every 5 seconds
+    </script>
+</body>
+</html>
