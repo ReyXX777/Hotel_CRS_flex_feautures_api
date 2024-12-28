@@ -100,8 +100,15 @@ def book_room(room_id):
     room = Room.query.get(room_id)
     if room and room.available:
         data = request.get_json()
-        check_in = datetime.strptime(data['check_in'], '%Y-%m-%d')
-        check_out = datetime.strptime(data['check_out'], '%Y-%m-%d')
+        try:
+            check_in = datetime.strptime(data['check_in'], '%Y-%m-%d')
+            check_out = datetime.strptime(data['check_out'], '%Y-%m-%d')
+        except ValueError:
+            return jsonify({"error": "Invalid date format"}), 400
+
+        if check_in >= check_out:
+            return jsonify({"error": "Check-out must be after check-in"}), 400
+
         booking = Booking(user_id=current_user.id, room_id=room_id, check_in=check_in, check_out=check_out)
         room.available = False
         current_user.reward_points += 100  # Example: 100 points per booking
@@ -130,3 +137,34 @@ def subscribe():
     if not User.query.filter_by(email=email).first():
         user = User(email=email)
         db.session.add(user)
+        db.session.commit()
+        return jsonify({"message": "Subscribed successfully"}), 200
+    return jsonify({"error": "Already subscribed"}), 400
+
+# Get all users
+@app.route('/users', methods=['GET'])
+def get_users():
+    users = User.query.all()
+    return jsonify([{ 'id': user.id, 'email': user.email, 'reward_points': user.reward_points, 'visits': user.visits } for user in users]), 200
+
+# Get all bookings for a user
+@app.route('/users/<int:user_id>/bookings', methods=['GET'])
+@login_required
+def get_user_bookings(user_id):
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    bookings = Booking.query.filter_by(user_id=user_id).all()
+    return jsonify([{ 'id': booking.id, 'room_id': booking.room_id, 'check_in': booking.check_in.strftime('%Y-%m-%d'), 'check_out': booking.check_out.strftime('%Y-%m-%d') } for booking in bookings]), 200
+
+# Get all events
+@app.route('/events', methods=['GET'])
+def get_events():
+    events = Event.query.all()
+    return jsonify([{ 'id': event.id, 'name': event.name, 'date': event.date.strftime('%Y-%m-%d'), 'location': event.location, 'category': event.category } for event in events]), 200
+
+# Initialize the database and start the app
+if __name__ == '__main__':
+    db.create_all()
+    app.run(debug=True)
