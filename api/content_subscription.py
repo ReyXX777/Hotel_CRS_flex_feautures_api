@@ -160,6 +160,12 @@ def add_event():
     db.session.commit()
     return jsonify({"message": "Event added successfully"}), 200
 
+# Get all events
+@app.route('/events', methods=['GET'])
+def get_events():
+    events = Event.query.all()
+    return jsonify([{ 'name': event.name, 'date': event.date.strftime('%Y-%m-%d'), 'location': event.location, 'category': event.category } for event in events])
+
 # Room recommendations based on user preferences and bookings
 @app.route('/recommendations/rooms/<int:user_id>', methods=['GET'])
 @login_required
@@ -206,10 +212,17 @@ def create_campaign():
     db.session.commit()
     return jsonify({"message": "Campaign created successfully"}), 200
 
+# Get all campaigns
+@app.route('/campaigns', methods=['GET'])
+def get_campaigns():
+    campaigns = Campaign.query.all()
+    return jsonify([{ 'name': campaign.name, 'content': campaign.content, 'audience_segment': campaign.audience_segment, 'created_at': campaign.created_at.strftime('%Y-%m-%d %H:%M:%S') } for campaign in campaigns])
+
 # Graceful shutdown of the scheduler
 @app.before_first_request
 def before_first_request():
     db.create_all()
+    scheduler.start()
 
 if __name__ == '__main__':
     try:
