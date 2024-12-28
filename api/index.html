@@ -13,6 +13,12 @@
             line-height: 100px;
             font-size: 20px;
             color: white;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .room:hover {
+            transform: scale(1.1);
         }
         .available {
             background-color: green;
@@ -20,29 +26,49 @@
         .reserved {
             background-color: red;
         }
+        .error {
+            color: red;
+            font-size: 18px;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
     <h1>Hotel Room Map</h1>
     <div id="room-map"></div>
+    <div id="error-message" class="error"></div>
 
     <script>
         async function fetchRooms() {
-            const response = await fetch('/api/rooms');
-            const rooms = await response.json();
-            const roomMap = document.getElementById('room-map');
-            roomMap.innerHTML = '';
+            try {
+                const response = await fetch('/api/rooms');
+                if (!response.ok) {
+                    throw new Error('Failed to fetch room data');
+                }
+                const rooms = await response.json();
 
-            for (const [room, status] of Object.entries(rooms)) {
-                const roomDiv = document.createElement('div');
-                roomDiv.className = `room ${status ? 'reserved' : 'available'}`;
-                roomDiv.textContent = room;
-                roomMap.appendChild(roomDiv);
+                const roomMap = document.getElementById('room-map');
+                roomMap.innerHTML = '';
+
+                for (const [roomNumber, isReserved] of Object.entries(rooms)) {
+                    const roomDiv = document.createElement('div');
+                    roomDiv.className = `room ${isReserved ? 'reserved' : 'available'}`;
+                    roomDiv.textContent = roomNumber;
+                    roomDiv.title = `Room ${roomNumber} - ${isReserved ? 'Reserved' : 'Available'}`;
+                    roomMap.appendChild(roomDiv);
+                }
+
+                // Clear any previous error messages
+                document.getElementById('error-message').textContent = '';
+            } catch (error) {
+                console.error('Error fetching rooms:', error);
+                document.getElementById('error-message').textContent = 'Error loading room data. Please try again later.';
             }
         }
 
+        // Fetch rooms on page load and refresh every 5 seconds
         fetchRooms();
-        setInterval(fetchRooms, 5000); // Refresh every 5 seconds
+        setInterval(fetchRooms, 5000);
     </script>
 </body>
 </html>
