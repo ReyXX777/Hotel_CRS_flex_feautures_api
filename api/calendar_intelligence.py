@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify, render_template, abort
 from flask_sqlalchemy import SQLAlchemy
 from flask_mail import Mail, Message
 from datetime import datetime, timedelta
+import logging
 
 app = Flask(__name__)
 
@@ -122,6 +123,18 @@ def subscribe():
         return jsonify({"message": "Subscribed successfully"}), 200
     return jsonify({"error": "Email is already subscribed"}), 400
 
+# API to get all subscribers
+@app.route('/subscribers', methods=['GET'])
+def get_subscribers():
+    subscribers = Subscriber.query.all()
+    return jsonify([{ 'id': subscriber.id, 'email': subscriber.email } for subscriber in subscribers]), 200
+
+# API to get all bookings
+@app.route('/bookings', methods=['GET'])
+def get_bookings():
+    bookings = Booking.query.all()
+    return jsonify([{ 'id': booking.id, 'room_id': booking.room_id, 'check_in': booking.check_in.strftime('%Y-%m-%d'), 'check_out': booking.check_out.strftime('%Y-%m-%d'), 'guest_name': booking.guest_name } for booking in bookings]), 200
+
 # Check if it's the festive season (e.g., Christmas or New Year)
 def is_festive_season():
     today = datetime.today()
@@ -136,9 +149,12 @@ def send_promotional_emails():
     if is_festive_season():
         subscribers = Subscriber.query.all()
         for subscriber in subscribers:
-            msg = Message('Festive Season Offer!', recipients=[subscriber.email])
-            msg.body = 'Enjoy our special festive season discounts at our hotel! Book now and save!'
-            mail.send(msg)
+            try:
+                msg = Message('Festive Season Offer!', recipients=[subscriber.email])
+                msg.body = 'Enjoy our special festive season discounts at our hotel! Book now and save!'
+                mail.send(msg)
+            except Exception as e:
+                logging.error(f"Failed to send email to {subscriber.email}: {e}")
         print("Promotional emails sent successfully.")
 
 # Initialize the database and start the app
