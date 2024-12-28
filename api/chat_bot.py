@@ -194,4 +194,31 @@ def add_review(room_id):
 
     data = request.get_json()
     rating = data.get('rating')
-    comment
+    comment = data.get('comment')
+
+    if not rating or not comment:
+        return jsonify({"error": "Rating and comment are required"}), 400
+
+    if not (1 <= rating <= 5):
+        return jsonify({"error": "Rating must be between 1 and 5"}), 400
+
+    review = Review(user_id=current_user.id, room_id=room_id, rating=rating, comment=comment)
+    db.session.add(review)
+    db.session.commit()
+
+    return jsonify({"message": "Review added successfully"}), 200
+
+# Get all reviews for a room
+@app.route('/rooms/<int:room_id>/reviews', methods=['GET'])
+def get_reviews(room_id):
+    room = Room.query.get(room_id)
+    if not room:
+        return jsonify({"error": "Room not found"}), 404
+
+    reviews = Review.query.filter_by(room_id=room_id).all()
+    return jsonify([{ 'user_id': review.user_id, 'rating': review.rating, 'comment': review.comment, 'created_at': review.created_at.strftime('%Y-%m-%d %H:%M:%S') } for review in reviews])
+
+# Initialize the database and start the app
+if __name__ == '__main__':
+    db.create_all()
+    app.run(debug=True)
