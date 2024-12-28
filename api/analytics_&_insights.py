@@ -3,6 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_mail import Mail, Message
 from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime, timedelta
+import logging
 
 app = Flask(__name__)
 
@@ -141,23 +142,37 @@ def add_event():
     except (KeyError, ValueError):
         return jsonify({"error": "Invalid event data"}), 400
 
+# API to get all events
+@app.route('/events', methods=['GET'])
+def get_events():
+    events = Event.query.all()
+    return jsonify([{ 'name': event.name, 'date': event.date.strftime('%Y-%m-%d'), 'location': event.location } for event in events]), 200
+
 # Send promotional emails for upcoming events
 def send_promotional_emails():
     today = datetime.today()
-    upcoming_events = Event.query.filter(Event.date <= today + timedelta(days=7)).all()
+    upcoming_events = Event.query.filter(Event.date >= today, Event.date <= today + timedelta(days=7)).all()
     if upcoming_events:
         subscribers = Subscriber.query.all()
         for subscriber in subscribers:
-            msg = Message('Upcoming Event Promotion!', recipients=[subscriber.email])
-            msg.body = 'Don’t miss out on our special offers for upcoming events! Here are the details:'
-            for event in upcoming_events:
-                msg.body += f'\n- {event.name} on {event.date.strftime("%Y-%m-%d")} at {event.location}'
-            mail.send(msg)
+            try:
+                msg = Message('Upcoming Event Promotion!', recipients=[subscriber.email])
+                msg.body = 'Don’t miss out on our special offers for upcoming events! Here are the details:'
+                for event in upcoming_events:
+                    msg.body += f'\n- {event.name} on {event.date.strftime("%Y-%m-%d")} at {event.location}'
+                mail.send(msg)
+            except Exception as e:
+                logging.error(f"Failed to send email to {subscriber.email}: {e}")
         print("Promotional emails sent successfully.")
 
 # Scheduler to send promotional emails daily
 scheduler.add_job(send_promotional_emails, 'interval', days=1)
 scheduler.start()
+
+# Shutdown scheduler when the app stops
+@app.teardown_appcontext
+def shutdown_scheduler(exception=None):
+    scheduler.shutdown()
 
 # Initialize the database and start the Flask app
 if __name__ == '__main__':
