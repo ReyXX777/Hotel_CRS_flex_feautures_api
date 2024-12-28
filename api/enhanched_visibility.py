@@ -58,6 +58,17 @@ def get_rooms():
         'available': room.available
     } for room in rooms]), 200
 
+# API to get details of all available rooms
+@app.route('/rooms/available', methods=['GET'])
+def get_available_rooms():
+    available_rooms = Room.query.filter_by(available=True).all()
+    return jsonify([{
+        'room_number': room.room_number,
+        'room_type': room.room_type,
+        'price': room.price,
+        'available': room.available
+    } for room in available_rooms]), 200
+
 # API to get details of a specific room by room_id
 @app.route('/rooms/<int:room_id>', methods=['GET'])
 def get_room(room_id):
@@ -104,6 +115,47 @@ def release_room(room_id):
     db.session.commit()
 
     return jsonify({"message": f"Room {room.room_number} released successfully"}), 200
+
+# API to get all bookings
+@app.route('/bookings', methods=['GET'])
+def get_bookings():
+    bookings = Booking.query.all()
+    return jsonify([{
+        'id': booking.id,
+        'room_id': booking.room_id,
+        'check_in': booking.check_in.strftime('%Y-%m-%d'),
+        'check_out': booking.check_out.strftime('%Y-%m-%d'),
+        'guest_name': booking.guest_name
+    } for booking in bookings]), 200
+
+# API to get bookings for a specific room
+@app.route('/rooms/<int:room_id>/bookings', methods=['GET'])
+def get_bookings_for_room(room_id):
+    room = get_room_or_404(room_id)
+    bookings = Booking.query.filter_by(room_id=room_id).all()
+    return jsonify([{
+        'id': booking.id,
+        'check_in': booking.check_in.strftime('%Y-%m-%d'),
+        'check_out': booking.check_out.strftime('%Y-%m-%d'),
+        'guest_name': booking.guest_name
+    } for booking in bookings]), 200
+
+# API to cancel a booking
+@app.route('/bookings/<int:booking_id>/cancel', methods=['DELETE'])
+def cancel_booking(booking_id):
+    booking = Booking.query.get(booking_id)
+    if not booking:
+        return jsonify({"error": "Booking not found"}), 404
+
+    room = Room.query.get(booking.room_id)
+    if not room:
+        return jsonify({"error": "Room not found"}), 404
+
+    room.available = True
+    db.session.delete(booking)
+    db.session.commit()
+
+    return jsonify({"message": f"Booking {booking_id} canceled successfully"}), 200
 
 # Custom error handler for 404 errors
 @app.errorhandler(404)
