@@ -86,6 +86,36 @@ def release_room(room_id):
 
     return jsonify({"message": f"Room {room.room_number} released successfully"}), 200
 
+# Route to get all reservations
+@app.route('/reservations', methods=['GET'])
+def get_reservations():
+    reservations = Reservation.query.all()
+    return jsonify([{ 'id': reservation.id, 'room_id': reservation.room_id, 'check_in': reservation.check_in.strftime('%Y-%m-%d'), 'check_out': reservation.check_out.strftime('%Y-%m-%d'), 'guest_name': reservation.guest_name } for reservation in reservations]), 200
+
+# Route to get reservations for a specific room
+@app.route('/rooms/<int:room_id>/reservations', methods=['GET'])
+def get_room_reservations(room_id):
+    room = get_room_or_404(room_id)
+    reservations = Reservation.query.filter_by(room_id=room_id).all()
+    return jsonify([{ 'id': reservation.id, 'check_in': reservation.check_in.strftime('%Y-%m-%d'), 'check_out': reservation.check_out.strftime('%Y-%m-%d'), 'guest_name': reservation.guest_name } for reservation in reservations]), 200
+
+# Route to cancel a reservation
+@app.route('/reservations/<int:reservation_id>/cancel', methods=['POST'])
+def cancel_reservation(reservation_id):
+    reservation = Reservation.query.get(reservation_id)
+    if not reservation:
+        return jsonify({"error": "Reservation not found"}), 404
+
+    room = Room.query.get(reservation.room_id)
+    if not room:
+        return jsonify({"error": "Room not found"}), 404
+
+    room.available = True  # Mark room as available again
+    db.session.delete(reservation)
+    db.session.commit()
+
+    return jsonify({"message": f"Reservation {reservation_id} canceled successfully"}), 200
+
 # Route to get insights like total reservations, peak times, and guest preferences
 @app.route('/insights', methods=['GET'])
 def get_insights():
