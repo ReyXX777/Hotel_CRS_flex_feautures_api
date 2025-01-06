@@ -10,17 +10,46 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    # Step 1: Checkout the repository
     - name: Checkout code
       uses: actions/checkout@v2
 
+    # Step 2: Set up Node.js environment
     - name: Set up Node.js
       uses: actions/setup-node@v2
       with:
         node-version: '14'
 
+    # Step 3: Install project dependencies
     - name: Install dependencies
       run: npm install
 
-    - name: Run Docker Compose
-      run: |
-        docker-compose -f docker-compose.yml up --build -d
+    # Step 4: Log in to AWS CLI
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1 # Replace with your desired region
+
+    # Step 5: Transfer files to EC2 instance
+    - name: Deploy to EC2
+      uses: appleboy/scp-action@v0.2.3
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ubuntu # Replace with your EC2 username
+        key: ${{ secrets.EC2_PRIVATE_KEY }}
+        source: "."
+        target: "/home/ubuntu/app" # Replace with your deployment directory
+
+    # Step 6: SSH into the EC2 instance to restart services
+    - name: Restart application on EC2
+      uses: appleboy/ssh-action@v0.1.6
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ubuntu
+        key: ${{ secrets.EC2_PRIVATE_KEY }}
+        script: |
+          cd /home/ubuntu/app
+          docker-compose -f docker-compose.yml down
+          docker-compose -f docker-compose.yml up --build -d
