@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import RoomCard from './RoomCard';
 import api from '../services/api';
+import './RoomList.css'; // Added CSS for styling
 
 const RoomList = () => {
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [filter, setFilter] = useState('all'); // Added filter state
 
   // Fetch room data from the API
   useEffect(() => {
@@ -37,18 +39,38 @@ const RoomList = () => {
     }
   };
 
+  // Handle filter change
+  const handleFilterChange = (e) => {
+    setFilter(e.target.value);
+  };
+
+  // Filter rooms based on availability
+  const filteredRooms = filter === 'available'
+    ? rooms.filter((room) => room.available)
+    : rooms;
+
   // Render content
   if (loading) return <p>Loading rooms...</p>;
   if (error) return <p className="error">{error}</p>;
-  if (rooms.length === 0) return <p>No rooms available at the moment.</p>;
+  if (filteredRooms.length === 0) return <p>No rooms available at the moment.</p>;
 
   return (
     <div className="room-list">
-      {rooms.map((room) => (
+      <div className="filter-controls"> {/* Added filter controls */}
+        <label>
+          Filter by:
+          <select value={filter} onChange={handleFilterChange}>
+            <option value="all">All Rooms</option>
+            <option value="available">Available Rooms</option>
+          </select>
+        </label>
+      </div>
+      {filteredRooms.map((room) => (
         <RoomCard
           key={room.id}
           room={room}
           onAction={handleRoomAction}
+          onDetails={(roomId) => alert(`Details for room ${roomId}`)} // Added details handler
         />
       ))}
     </div>
