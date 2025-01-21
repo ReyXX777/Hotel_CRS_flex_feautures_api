@@ -2,6 +2,8 @@ from flask import Blueprint, request, jsonify, abort
 from models import Room, Booking
 from app import db
 from services.recommendation_service import recommend_rooms
+from datetime import datetime  # Added for booking timestamps
+from utils.validation import validate_booking_data  # Added for input validation
 
 # Blueprint for room-related routes
 room_routes = Blueprint('room_routes', __name__)
@@ -19,6 +21,7 @@ def get_rooms():
             'room_type': room.room_type,
             'price': room.price,
             'available': room.available,
+            'description': room.description,  # Added room description
         }
         for room in rooms
     ]
@@ -38,13 +41,18 @@ def book_room(room_id):
     try:
         # Extract and validate input data
         data = request.get_json()
+        validation_error = validate_booking_data(data)  # Added input validation
+        if validation_error:
+            return jsonify({"error": validation_error}), 400
+
         user_id = data.get('user_id')
 
-        if not user_id:
-            return jsonify({"error": "User ID is required to book a room"}), 400
-
-        # Create a booking
-        booking = Booking(user_id=user_id, room_id=room_id)
+        # Create a booking with timestamp
+        booking = Booking(
+            user_id=user_id,
+            room_id=room_id,
+            booked_at=datetime.utcnow()  # Added booking timestamp
+        )
         room.available = False
 
         # Persist the changes
@@ -55,4 +63,20 @@ def book_room(room_id):
 
     except Exception as e:
         db.session.rollback()
+        return jsonify({"error": f"An error occurred: {str(e)}"}), 500
+
+# Get room recommendations
+@room_routes.route('/recommendations', methods=['POST'])
+def get_recommendations():
+    try:
+        data = request.get_json()
+        user_preferences = data.get('preferences')
+
+        if not user_preferences:
+            return jsonify({"error": "Preferences are required for recommendations"}), 400
+
+        recommendations = recommend_rooms(user_preferences)
+        return jsonify(recommendations), 200
+
+    except Exception as e:
         return jsonify({"error": f"An error occurred: {str(e)}"}), 500
