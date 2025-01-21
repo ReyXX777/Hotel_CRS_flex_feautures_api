@@ -1,4 +1,6 @@
 import React from 'react';
+import { Link } from 'react-router-dom'; // Added React Router for navigation
+import './Navbar.css'; // Added CSS for styling
 
 const Navbar = () => {
   return (
@@ -7,11 +9,15 @@ const Navbar = () => {
         <h1>Hotel Booking</h1>
       </div>
       <ul className="navbar-menu">
-        <li><a href="#home">Home</a></li>
-        <li><a href="#rooms">Rooms</a></li>
-        <li><a href="#about">About Us</a></li>
-        <li><a href="#contact">Contact</a></li>
+        <li><Link to="/">Home</Link></li> {/* Replaced anchor tags with React Router Link */}
+        <li><Link to="/rooms">Rooms</Link></li>
+        <li><Link to="/about">About Us</Link></li>
+        <li><Link to="/contact">Contact</Link></li>
       </ul>
+      <div className="navbar-auth"> {/* Added authentication links */}
+        <Link to="/login" className="auth-link">Login</Link>
+        <Link to="/register" className="auth-link">Register</Link>
+      </div>
     </nav>
   );
 };
