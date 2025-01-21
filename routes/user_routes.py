@@ -2,7 +2,8 @@ from flask import request, jsonify, Blueprint
 from app import db, login_manager
 from flask_login import login_user, logout_user, current_user, login_required
 from models import User
-from werkzeug.security import check_password_hash
+from werkzeug.security import check_password_hash, generate_password_hash  # Added password hashing
+from utils.validation import validate_user_data  # Added input validation
 
 # Blueprint for user-related routes
 user_routes = Blueprint('user_routes', __name__)
@@ -48,5 +49,36 @@ def logout():
 def get_current_user():
     return jsonify({
         "email": current_user.email,
-        "visits": current_user.visits
+        "visits": current_user.visits,
+        "reward_points": current_user.reward_points  # Added reward points to response
     }), 200
+
+# Register endpoint
+@user_routes.route('/register', methods=['POST'])
+def register():
+    try:
+        data = request.get_json()
+        validation_error = validate_user_data(data)  # Added input validation
+        if validation_error:
+            return jsonify({"error": validation_error}), 400
+
+        email = data.get('email')
+        password = data.get('password')
+
+        if User.query.filter_by(email=email).first():
+            return jsonify({"error": "User with this email already exists"}), 400
+
+        new_user = User(
+            email=email,
+            password=generate_password_hash(password),  # Hash the password
+            reward_points=0,  # Initialize reward points
+            visits=0  # Initialize visits
+        )
+        db.session.add(new_user)
+        db.session.commit()
+
+        return jsonify({"message": "User registered successfully"}), 201
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": f"An error occurred: {str(e)}"}), 500
