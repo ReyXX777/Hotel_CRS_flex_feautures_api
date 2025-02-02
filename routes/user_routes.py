@@ -2,8 +2,9 @@ from flask import request, jsonify, Blueprint
 from app import db, login_manager
 from flask_login import login_user, logout_user, current_user, login_required
 from models import User
-from werkzeug.security import check_password_hash, generate_password_hash  # Added password hashing
-from utils.validation import validate_user_data  # Added input validation
+from werkzeug.security import check_password_hash, generate_password_hash
+from utils.validation import validate_user_data
+import datetime  # Import datetime for timestamps
 
 # Blueprint for user-related routes
 user_routes = Blueprint('user_routes', __name__)
@@ -24,8 +25,9 @@ def login():
         if user and check_password_hash(user.password, password):
             login_user(user)
             user.visits += 1
+            user.last_login = datetime.datetime.now() # Update last login time
             db.session.commit()
-            return jsonify({"message": "Logged in successfully", "user": {"email": user.email, "visits": user.visits}}), 200
+            return jsonify({"message": "Logged in successfully", "user": {"email": user.email, "visits": user.visits, "last_login": user.last_login}}), 200
 
         return jsonify({"error": "Invalid email or password"}), 401
 
@@ -50,7 +52,8 @@ def get_current_user():
     return jsonify({
         "email": current_user.email,
         "visits": current_user.visits,
-        "reward_points": current_user.reward_points  # Added reward points to response
+        "reward_points": current_user.reward_points,
+        "last_login": current_user.last_login # Include last login time
     }), 200
 
 # Register endpoint
@@ -58,7 +61,7 @@ def get_current_user():
 def register():
     try:
         data = request.get_json()
-        validation_error = validate_user_data(data)  # Added input validation
+        validation_error = validate_user_data(data)
         if validation_error:
             return jsonify({"error": validation_error}), 400
 
@@ -70,9 +73,10 @@ def register():
 
         new_user = User(
             email=email,
-            password=generate_password_hash(password),  # Hash the password
-            reward_points=0,  # Initialize reward points
-            visits=0  # Initialize visits
+            password=generate_password_hash(password),
+            reward_points=0,
+            visits=0,
+            registration_date=datetime.datetime.now() # Add registration date
         )
         db.session.add(new_user)
         db.session.commit()
