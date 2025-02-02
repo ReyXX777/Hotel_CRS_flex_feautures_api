@@ -22,6 +22,8 @@ def get_rooms():
             'price': room.price,
             'available': room.available,
             'description': room.description,  # Added room description
+            'rating': room.rating,  # Added room rating
+            'amenities': room.amenities,  # Added room amenities
         }
         for room in rooms
     ]
@@ -80,3 +82,48 @@ def get_recommendations():
 
     except Exception as e:
         return jsonify({"error": f"An error occurred: {str(e)}"}), 500
+
+# Release a room
+@room_routes.route('/<int:room_id>/release', methods=['POST'])
+def release_room(room_id):
+    room = Room.query.get(room_id)
+
+    if not room:
+        return jsonify({"error": f"Room with ID {room_id} not found"}), 404
+
+    if room.available:
+        return jsonify({"error": f"Room {room.room_number} is already available"}), 400
+
+    try:
+        # Find and delete the booking
+        booking = Booking.query.filter_by(room_id=room_id).first()
+        if booking:
+            db.session.delete(booking)
+            room.available = True
+            db.session.commit()
+            return jsonify({"message": f"Room {room.room_number} released successfully"}), 200
+        else:
+            return jsonify({"error": "No booking found for this room"}), 404
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": f"An error occurred: {str(e)}"}), 500
+
+# Get room details by ID
+@room_routes.route('/<int:room_id>', methods=['GET'])
+def get_room_details(room_id):
+    room = Room.query.get(room_id)
+
+    if not room:
+        return jsonify({"error": f"Room with ID {room_id} not found"}), 404
+
+    room_data = {
+        'room_number': room.room_number,
+        'room_type': room.room_type,
+        'price': room.price,
+        'available': room.available,
+        'description': room.description,
+        'rating': room.rating,
+        'amenities': room.amenities,
+    }
+    return jsonify(room_data), 200
