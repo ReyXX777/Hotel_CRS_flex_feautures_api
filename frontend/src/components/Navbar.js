@@ -18,6 +18,14 @@ const Navbar = () => {
         <Link to="/login" className="auth-link">Login</Link>
         <Link to="/register" className="auth-link">Register</Link>
       </div>
+      <div className="navbar-search"> {/* Added search bar component */}
+        <input type="text" placeholder="Search rooms..." />
+        <button type="submit">Search</button>
+      </div>
+      <div className="navbar-social"> {/* Added social media links */}
+        <a href="https://facebook.com" target="_blank" rel="noopener noreferrer">Facebook</a>
+        <a href="https://twitter.com" target="_blank" rel="noopener noreferrer">Twitter</a>
+      </div>
     </nav>
   );
 };
