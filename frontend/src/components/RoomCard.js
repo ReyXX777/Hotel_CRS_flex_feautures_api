@@ -35,6 +35,17 @@ const RoomCard = ({ room, onAction, onDetails }) => {
         </button>
       </div>
       {room.description && <p className="room-description">{room.description}</p>} {/* Added room description */}
+      <div className="room-rating"> {/* Added room rating component */}
+        <span>Rating: {room.rating || 'N/A'}</span>
+      </div>
+      <div className="room-amenities"> {/* Added room amenities component */}
+        <h4>Amenities:</h4>
+        <ul>
+          {room.amenities?.map((amenity, index) => (
+            <li key={index}>{amenity}</li>
+          ))}
+        </ul>
+      </div>
     </div>
   );
 };
@@ -46,6 +57,8 @@ RoomCard.propTypes = {
     price: PropTypes.number.isRequired,
     available: PropTypes.bool.isRequired,
     description: PropTypes.string, // Added description prop type
+    rating: PropTypes.number, // Added rating prop type
+    amenities: PropTypes.arrayOf(PropTypes.string), // Added amenities prop type
   }).isRequired,
   onAction: PropTypes.func.isRequired, // Function to handle booking/releasing actions
   onDetails: PropTypes.func.isRequired, // Function to handle viewing details
